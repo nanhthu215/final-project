@@ -19,20 +19,14 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
-            sudo apt-get update
-            # Kiểm tra và cài Docker nếu chưa có
-            if ! [ -x "$(command -v docker)" ]; then
-              sudo apt-get install -y docker.io docker-compose
-            fi
+            cd ~/final-project
+            # Gỡ bỏ container cũ đang bị lỗi kẹt (nếu có)
+            sudo docker rm -f midterm_web || true
             
-            # Vào thư mục dự án và cập nhật code
-            if [ -d "~/final-project" ]; then
-              cd ~/final-project
-              git pull origin main
-            else
-              git clone https://github.com/nanhthu215/final-project.git ~/final-project
-              cd ~/final-project
-            fi
+            # Cập nhật code mới nhất
+            git pull origin main
             
-            # Chạy ứng dụng
-            sudo docker-compose up -d --build
+            # Sử dụng 'docker compose' (V2) thay vì 'docker-compose' (V1)
+            # Lệnh này sạch hơn và không bị lỗi KeyError
+            sudo docker compose down
+            sudo docker compose up -d --build
