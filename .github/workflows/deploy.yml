@@ -1,0 +1,38 @@
+name: CD - Deploy to Production
+
+on:
+  workflow_run:
+    workflows: ["CI Pipeline"] # Chạy sau khi CI (ci.yml) thành công
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Deploy to App Server via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.APP_SERVER_1_IP }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            sudo apt-get update
+            # Kiểm tra và cài Docker nếu chưa có
+            if ! [ -x "$(command -v docker)" ]; then
+              sudo apt-get install -y docker.io docker-compose
+            fi
+            
+            # Vào thư mục dự án và cập nhật code
+            if [ -d "~/final-project" ]; then
+              cd ~/final-project
+              git pull origin main
+            else
+              git clone https://github.com/nanhthu215/final-project.git ~/final-project
+              cd ~/final-project
+            fi
+            
+            # Chạy ứng dụng
+            sudo docker-compose up -d --build
