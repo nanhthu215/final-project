@@ -1,6 +1,35 @@
-node_modules
-.terraform/ 
-*.exe 
-*.tfstate* 
-*.pem 
-node_modules/ 
+# Dependencies
+node_modules/
+
+# Environment & secrets
+.env
+.env.local
+*.pem
+*.key
+
+# Build output
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Uploads & data (Quan trọng: Tránh commit ảnh upload từ main.js)
+public/uploads/*
+!public/uploads/.gitkeep
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Terraform files
+.terraform/
+*.exe
+*.tfstate
+*.tfstate.backup
+*.pem
