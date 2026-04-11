@@ -1,4 +1,72 @@
-- name: Deploy to App Server 1
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  ci:
+    name: CI - Build, Lint, Scan, Push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: src/package-lock.json
+
+      - name: Install dependencies
+        run: cd src && npm install
+
+      - name: Lint code
+        run: cd src && npm run lint
+
+      - name: Test
+        run: cd src && npm test
+
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/midterm-app:${{ github.sha }} .
+          docker tag ${{ secrets.DOCKER_USERNAME }}/midterm-app:${{ github.sha }} ${{ secrets.DOCKER_USERNAME }}/midterm-app:latest
+
+      - name: Security scan - Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ secrets.DOCKER_USERNAME }}/midterm-app:${{ github.sha }}'
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
+          format: 'table'
+        continue-on-error: true
+
+      - name: Login to Docker Hub
+        if: github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Push image to Docker Hub
+        if: github.ref == 'refs/heads/main'
+        run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/midterm-app:${{ github.sha }}
+          docker push ${{ secrets.DOCKER_USERNAME }}/midterm-app:latest
+          echo "Pushed: ${{ secrets.DOCKER_USERNAME }}/midterm-app:${{ github.sha }}"
+
+  deploy:
+    name: CD - Deploy to Production
+    needs: ci
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Deploy to App Server 1
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.APP_SERVER_1_IP }}
@@ -22,7 +90,7 @@
             sleep 15
             curl -f http://localhost:3000/health || exit 1
             docker image prune -f --filter "until=24h"
-            echo "Server 1 deployed: ${{ github.sha }}"
+            echo "Server 1 deployed successfully"
 
       - name: Deploy to App Server 2
         uses: appleboy/ssh-action@v1
@@ -48,4 +116,4 @@
             sleep 15
             curl -f http://localhost:3000/health || exit 1
             docker image prune -f --filter "until=24h"
-            echo "Server 2 deployed: ${{ github.sha }}"
+            echo "Server 2 deployed successfully"
