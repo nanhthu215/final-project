@@ -1,0 +1,11 @@
+node_modules
+.env
+.git
+.gitignore
+*.log
+uploads/
+docs/
+README.md
+phase1/
+phase2/
+phase3/
