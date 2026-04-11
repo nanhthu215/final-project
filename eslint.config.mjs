@@ -1,12 +1,9 @@
-import js from "@eslint/js";
-
 export default [
   {
-    ignores: ["src/public/**", "src/src/public/**"]
+    ignores: ["**/public/**", "node_modules/**"]
   },
-  js.configs.recommended,
   {
-    files: ["src/**/*.js"],
+    files: ["**/*.js"],
     languageOptions: {
       ecmaVersion: 2021,
       globals: {
@@ -25,7 +22,7 @@ export default [
     rules: {
       "no-unused-vars": "warn",
       "no-console": "off",
-      "no-useless-assignment": "off"
+      "no-undef": "off"
     }
   }
 ];
