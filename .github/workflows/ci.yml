@@ -60,13 +60,13 @@ jobs:
           echo "Pushed: ${{ secrets.DOCKER_USERNAME }}/midterm-app:${{ github.sha }}"
 
   deploy:
-    name: CD - Deploy to Production
+    name: CD - Deploy to Swarm
     needs: ci
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
 
     steps:
-      - name: Deploy to App Server 1
+      - name: Deploy to Swarm
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.APP_SERVER_1_IP }}
@@ -75,45 +75,12 @@ jobs:
           script: |
             set -e
             docker pull ${{ secrets.DOCKER_USERNAME }}/midterm-app:${{ github.sha }}
-            docker stop midterm_web || true
-            docker rm midterm_web || true
-            docker run -d \
-              --name midterm_web \
-              --restart always \
-              -p 3000:3000 \
-              -e NODE_ENV=production \
-              -e PORT=3000 \
-              -e MONGO_URI=mongodb://172.31.33.108:27017/midterm_db \
-              -e APP_VERSION=${{ github.sha }} \
-              -v uploads_data:/app/src/public/uploads \
-              ${{ secrets.DOCKER_USERNAME }}/midterm-app:${{ github.sha }}
-            sleep 15
+            docker service update \
+              --image ${{ secrets.DOCKER_USERNAME }}/midterm-app:${{ github.sha }} \
+              --update-parallelism 1 \
+              --update-delay 10s \
+              myapp_web
+            sleep 20
+            docker service ps myapp_web
             curl -f http://localhost:3000/health || exit 1
-            docker image prune -f --filter "until=24h"
-            echo "Server 1 deployed successfully"
-
-      - name: Deploy to App Server 2
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.APP_SERVER_2_IP }}
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            set -e
-            docker pull ${{ secrets.DOCKER_USERNAME }}/midterm-app:${{ github.sha }}
-            docker stop midterm_web || true
-            docker rm midterm_web || true
-            docker run -d \
-              --name midterm_web \
-              --restart always \
-              -p 3000:3000 \
-              -e NODE_ENV=production \
-              -e PORT=3000 \
-              -e MONGO_URI=mongodb://172.31.33.108:27017/midterm_db \
-              -e APP_VERSION=${{ github.sha }} \
-              -v uploads_data:/app/src/public/uploads \
-              ${{ secrets.DOCKER_USERNAME }}/midterm-app:${{ github.sha }}
-            sleep 15
-            curl -f http://localhost:3000/health || exit 1
-            docker image prune -f --filter "until=24h"
-            echo "Server 2 deployed successfully"
+            echo "Swarm rolling update deployed: ${{ github.sha }}"
