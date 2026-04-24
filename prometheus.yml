@@ -1,0 +1,24 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Node-exporter báo cáo phần cứng của từng server 
+  # (máy dùng 20% CPU hay 80% RAM đều được báo cáo qua cổng 9100)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets:
+          - '172.31.36.207:9100'  # App Server 1
+          - '172.31.35.211:9100'  # App Server 2
+          - '172.31.33.108:9100'  # DB Server
+
+  # cAdvisor đi bắt các dữ liệu bên trong nội bộ của Docker (vd: container 'web' cắn bao nhiêu MB RAM, container 'prometheus' đọc ghi ổ cứng bao nhiêu lần/giây)
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets:
+          - '172.31.36.207:8080'  # App Server 1 (Lấy thông số container đang chạy trên nó)
+          - '172.31.35.211:8080'  # App Server 2 (Lấy thông số container đang chạy trên nó)

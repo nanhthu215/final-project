@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  web:
+    # Sử dụng image được push lên từ GitHub Actions
+    image: nanhthu215/midterm-app:latest
+    ports:
+      # Expose cổng 3000 của container ra ngoài host
+      - "3000:3000"
+    deploy:
+      # Khởi tạo 2 bản sao (replicas) phân bổ ra cả 2 máy chủ (Manager và Worker)
+      replicas: 2
+      update_config:
+        # Thuật toán Rolling Update (Cuốn chiếu): 
+        # Cập nhật từng cái một (parallelism: 1) và đợi 10 giây (delay: 10s)
+        # Quá trình này giúp hệ thống lúc nào cũng có 1 container sống chờ phản hồi (Zero Downtime)
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        # Tự động khởi động lại nếu container bị crash
+        condition: on-failure
+    environment:
+      - MONGO_URI=mongodb://172.31.33.108:27017/final_project
+    networks:
+      - app-network
+
+  prometheus:
+    # Prometheus là database time-series dùng để thu thập thông số (metrics)
+    image: prom/prometheus:latest
+    volumes:
+      # Mount file cấu hình được sinh tự động nằm trên máy ảo vào container
+      - /home/ubuntu/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    deploy:
+      placement:
+        # Ép buộc dịch vụ này CHỈ được chạy trên con máy chủ Quản lý (App Server 1)
+        constraints: [node.role == manager]
+    networks:
+      - app-network
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+    networks:
+      - app-network
+
+  node-exporter:
+    # Node Exporter giúp bòn rút các thông số RAM, CPU phần cứng máy ảo
+    image: prom/node-exporter:latest
+    deploy:
+      # Mode Global: Tự động chạy chính xác 1 container này trên MỖI Node của cụm Swarm.
+      # Nếu bạn thêm máy thứ 3, Swarm tự vứt Node Exporter qua máy đó.
+      mode: global
+    ports:
+      # Cổng 9100 để prometheus lấy dữ liệu
+      - "9100:9100"
+    networks:
+      - app-network
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    deploy:
+      mode: global
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: overlay

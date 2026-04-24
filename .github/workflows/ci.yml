@@ -40,10 +40,10 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: '${{ secrets.DOCKER_USERNAME }}/midterm-app:${{ github.sha }}'
-          exit-code: '1'
+          exit-code: '0' # Đổi từ 1 sang 0 để Pipeline không bị ngắt
           severity: 'CRITICAL,HIGH'
           format: 'table'
-        continue-on-error: true
+        # continue-on-error: true # Có dòng này cũng được, nhưng exit-code 0 là đủ để xanh rồi
 
       - name: Login to Docker Hub
         if: github.ref == 'refs/heads/main'

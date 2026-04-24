@@ -19,6 +19,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', uiRoutes);
 app.use('/products', productRoutes);
+
 // Health check endpoint — dùng cho CI/CD verify và ALB health check
 app.get('/health', (req, res) => {
   res.status(200).json({

@@ -3,7 +3,6 @@
   hosts: app_servers
   become: yes
   tasks:
-
     - name: Update apt cache
       apt:
         update_cache: yes
@@ -47,11 +46,26 @@
         group: ubuntu
         mode: '0755'
 
+    - name: Create DuckDNS update script
+      copy:
+        dest: /home/ubuntu/update-duckdns.sh
+        content: |
+          #!/bin/bash
+          # Doi 30s cho mang on dinh roi moi cap nhat IP
+          sleep 30
+          curl -s "https://www.duckdns.org/update?domains=finalprojectdeloy&token=fdfb0adf-eeca-4275-88f9-f5f914e43573&ip="
+        mode: '0755'
+
+    - name: Add DuckDNS update to crontab @reboot
+      cron:
+        name: "Update DuckDNS on reboot"
+        special_time: reboot
+        job: "/bin/bash /home/ubuntu/update-duckdns.sh"
+
 - name: Setup DB Server
   hosts: db_servers
   become: yes
   tasks:
-
     - name: Update apt cache
       apt:
         update_cache: yes
@@ -92,3 +106,48 @@
         owner: ubuntu
         group: ubuntu
         mode: '0755'
+
+    - name: Write prometheus.yml
+      copy:
+        dest: /home/ubuntu/monitoring/prometheus.yml
+        content: |
+          global:
+            scrape_interval: 15s
+
+          scrape_configs:
+            - job_name: 'prometheus'
+              static_configs:
+                - targets: ['localhost:9090']
+
+            - job_name: 'node-exporter-db'
+              static_configs:
+                - targets: ['172.31.33.108:9100']
+                  labels:
+                    server: 'db-server'
+
+            - job_name: 'app-server-1'
+              static_configs:
+                - targets: ['172.31.36.207:9100']
+                  labels:
+                    server: 'app-server-1'
+
+            - job_name: 'app-server-2'
+              static_configs:
+                - targets: ['172.31.35.211:9100']
+                  labels:
+                    server: 'app-server-2'
+
+            - job_name: 'cadvisor-1'
+              static_configs:
+                - targets: ['172.31.36.207:8080']
+
+            - job_name: 'cadvisor-2'
+              static_configs:
+                - targets: ['172.31.35.211:8080']
+        owner: ubuntu
+        group: ubuntu
+        mode: '0644'
+
+    - name: Restart Prometheus
+      shell: docker restart prometheus
+      changed_when: false
