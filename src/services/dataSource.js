@@ -91,7 +91,7 @@ async function init(useMongo) {
         const docs = inMemory.map(({ name, price, color, description, imageUrl }) => ({ name, price, color, description, imageUrl }));
         await ProductModel.insertMany(docs);
       }
-    } catch (err) {
+    } catch (_err) {
       // if anything goes wrong, fall back to in-memory
       isMongo = false;
     }
@@ -142,7 +142,7 @@ async function replace(id, payload) {
   // if payload contains imageUrl and prev had a local upload, remove old file
   if (payload.imageUrl && prev && prev.imageUrl && prev.imageUrl.startsWith('/uploads/')) {
     const filePath = path.join(__dirname, '..', 'public', prev.imageUrl.substring(1));
-    try { await fs.unlink(filePath); } catch (e) { /* ignore */ }
+    try { await fs.unlink(filePath); } catch (_e) { /* ignore */ }
   }
   const item = { id, ...payload };
   inMemory[idx] = item;
@@ -156,7 +156,7 @@ async function patch(id, payload) {
       const prevDoc = await ProductModel.findById(id).lean();
       if (prevDoc && prevDoc.imageUrl && prevDoc.imageUrl.startsWith('/uploads/')) {
         const filePath = path.join(__dirname, '..', 'public', prevDoc.imageUrl.substring(1));
-        try { await fs.unlink(filePath); } catch (e) { /* ignore */ }
+        try { await fs.unlink(filePath); } catch (_e) { /* ignore */ }
       }
     }
     const doc = await ProductModel.findByIdAndUpdate(id, { $set: payload }, { new: true, runValidators: true }).lean();
@@ -167,7 +167,7 @@ async function patch(id, payload) {
   // handle image replacement: delete old file if needed
   if (payload.imageUrl && item.imageUrl && item.imageUrl.startsWith('/uploads/')) {
     const filePath = path.join(__dirname, '..', 'public', item.imageUrl.substring(1));
-    try { await fs.unlink(filePath); } catch (e) { /* ignore */ }
+    try { await fs.unlink(filePath); } catch (_e) { /* ignore */ }
   }
   Object.assign(item, payload);
   return item;
@@ -178,7 +178,7 @@ async function remove(id) {
     const doc = await ProductModel.findByIdAndDelete(id).lean();
     if (doc && doc.imageUrl && doc.imageUrl.startsWith('/uploads/')) {
       const filePath = path.join(__dirname, '..', 'public', doc.imageUrl.substring(1));
-      try { await fs.unlink(filePath); } catch (e) { /* ignore */ }
+      try { await fs.unlink(filePath); } catch (_e) { /* ignore */ }
     }
     return toDTO(doc);
   }
@@ -187,7 +187,7 @@ async function remove(id) {
   const [deleted] = inMemory.splice(idx, 1);
   if (deleted && deleted.imageUrl && deleted.imageUrl.startsWith('/uploads/')) {
     const filePath = path.join(__dirname, '..', 'public', deleted.imageUrl.substring(1));
-    try { await fs.unlink(filePath); } catch (e) { /* ignore */ }
+    try { await fs.unlink(filePath); } catch (_e) { /* ignore */ }
   }
   return deleted;
 }

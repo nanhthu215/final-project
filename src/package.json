@@ -7,7 +7,7 @@
     "start": "node src/main.js",
     "dev": "nodemon src/main.js",
     "lint": "eslint . --ext .js",
-    "test": "echo \"Tests passed\" && exit 0"
+    "test": "node tests/health.test.js"
   },
   "keywords": [],
   "author": "",

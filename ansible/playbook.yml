@@ -32,6 +32,24 @@
         state: started
         enabled: yes
 
+    - name: Create Nginx configuration for Reverse Proxy
+      copy:
+        dest: /etc/nginx/sites-available/default
+        content: |
+          server {
+              listen 80;
+              server_name finalprojectdeloy.duckdns.org;
+              location / {
+                  proxy_pass http://localhost:3000;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection 'upgrade';
+                  proxy_set_header Host $host;
+                  proxy_cache_bypass $http_upgrade;
+              }
+          }
+      notify: Restart Nginx
+
     - name: Add ubuntu to docker group
       user:
         name: ubuntu
@@ -53,7 +71,7 @@
           #!/bin/bash
           # Doi 30s cho mang on dinh roi moi cap nhat IP
           sleep 30
-          curl -s "https://www.duckdns.org/update?domains=finalprojectdeloy&token=fdfb0adf-eeca-4275-88f9-f5f914e43573&ip="
+          curl -s "https://www.duckdns.org/update?domains=finalprojectdeloy&token={{ duckdns_token }}&ip="
         mode: '0755'
 
     - name: Add DuckDNS update to crontab @reboot
@@ -151,3 +169,9 @@
     - name: Restart Prometheus
       shell: docker restart prometheus
       changed_when: false
+
+  handlers:
+    - name: Restart Nginx
+      service:
+        name: nginx
+        state: restarted

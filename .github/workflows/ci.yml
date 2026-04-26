@@ -40,10 +40,11 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: '${{ secrets.DOCKER_USERNAME }}/midterm-app:${{ github.sha }}'
-          exit-code: '0' # Đổi từ 1 sang 0 để Pipeline không bị ngắt
+          exit-code: '1' # Pipeline sẽ dừng nếu có lỗ hổng CRITICAL hoặc HIGH
           severity: 'CRITICAL,HIGH'
           format: 'table'
-        # continue-on-error: true # Có dòng này cũng được, nhưng exit-code 0 là đủ để xanh rồi
+          ignore-unfixed: true # Bỏ qua nếu lỗ hổng chưa có bản vá (tránh kẹt pipeline do base image)
+          trivyignores: .trivyignore # Hỗ trợ bỏ qua các CVE cụ thể nếu cần
 
       - name: Login to Docker Hub
         if: github.ref == 'refs/heads/main'
@@ -84,3 +85,17 @@ jobs:
             docker service ps myapp_web
             curl -f http://localhost:3000/health || exit 1
             echo "Swarm rolling update deployed: ${{ github.sha }}"
+
+      - name: Health Check on Worker Node
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.APP_SERVER_2_IP }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            echo "Verifying service status on Worker Node..."
+            # Kiểm tra xem container có đang chạy trên node này không
+            docker ps | grep myapp_web || echo "Service not yet balanced to this node (normal for small clusters)"
+            # Kiểm tra khả năng truy cập dịch vụ từ node này
+            curl -f http://localhost:3000/health || exit 1
+            echo "Worker Node is healthy."
