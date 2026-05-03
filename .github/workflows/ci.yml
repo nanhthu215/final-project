@@ -44,11 +44,11 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: '${{ secrets.DOCKER_USERNAME }}/midterm-app:${{ github.sha }}'
-          exit-code: '1' # Pipeline sẽ dừng nếu có lỗ hổng CRITICAL hoặc HIGH
+          exit-code: '1'        # Pipeline dừng nếu có lỗ hổng CRITICAL hoặc HIGH
           severity: 'CRITICAL,HIGH'
           format: 'table'
-          ignore-unfixed: true # Bỏ qua nếu lỗ hổng chưa có bản vá (tránh kẹt pipeline do base image)
-          trivyignores: .trivyignore # Hỗ trợ bỏ qua các CVE cụ thể nếu cần
+          ignore-unfixed: true  # Bỏ qua CVE chưa có bản vá (tránh kẹt pipeline do base image)
+          trivyignores: .trivyignore
 
       - name: Login to Docker Hub
         if: github.ref == 'refs/heads/main'
@@ -64,31 +64,87 @@ jobs:
           docker push ${{ secrets.DOCKER_USERNAME }}/midterm-app:latest
           echo "Pushed: ${{ secrets.DOCKER_USERNAME }}/midterm-app:${{ github.sha }}"
 
-  deploy:
-    name: CD - Deploy to Swarm
+  # ─── BONUS 7.2: Multi-Environment ───────────────────────────────────────────
+  deploy-staging:
+    name: CD - Deploy to Staging
     needs: ci
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
+    environment: staging  # GitHub Environment (không cần approval)
 
     steps:
-      - name: Deploy to Swarm
+      - name: Deploy to Staging environment (port 3100)
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.APP_SERVER_1_IP }}
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            set -e
-            docker pull ${{ secrets.DOCKER_USERNAME }}/midterm-app:${{ github.sha }}
+            IMAGE="${{ secrets.DOCKER_USERNAME }}/midterm-app:${{ github.sha }}"
+            docker pull "$IMAGE"
+
+            # Tạo mới hoặc cập nhật staging service (standalone, cổng 3100)
+            if docker service ls --format '{{.Name}}' | grep -q '^staging_web$'; then
+              docker service update \
+                --image "$IMAGE" \
+                --update-parallelism 1 \
+                --update-delay 10s \
+                staging_web
+            else
+              docker service create \
+                --name staging_web \
+                --replicas 1 \
+                --publish published=3100,target=3000 \
+                --env MONGO_URI=mongodb://172.31.33.108:27017/final_project \
+                "$IMAGE"
+            fi
+
+            sleep 15
+            curl -f http://localhost:3100/health || exit 1
+            echo "Staging deployed OK: ${{ github.sha }}"
+
+  # ─── BONUS 7.2 + 7.4: Production với Approval Gate + Auto Rollback ──────────
+  deploy-production:
+    name: CD - Deploy to Production (Approval Required)
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production  # GitHub Environment (yêu cầu approval thủ công)
+
+    steps:
+      - name: Rolling Update with Auto Rollback on Failure
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.APP_SERVER_1_IP }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            IMAGE="${{ secrets.DOCKER_USERNAME }}/midterm-app:${{ github.sha }}"
+            docker pull "$IMAGE"
+
+            # Rolling Update: 1 replica mỗi lần, đợi 10s → Zero Downtime
             docker service update \
-              --image ${{ secrets.DOCKER_USERNAME }}/midterm-app:${{ github.sha }} \
+              --image "$IMAGE" \
               --update-parallelism 1 \
               --update-delay 10s \
               myapp_web
+
             sleep 20
             docker service ps myapp_web
-            curl -f http://localhost:3000/health || exit 1
-            echo "Swarm rolling update deployed: ${{ github.sha }}"
+
+            # BONUS 7.4: Auto Rollback nếu health check thất bại sau deploy
+            if ! curl -sf http://localhost:3000/health > /dev/null; then
+              echo "Health check FAILED! Initiating automatic rollback..."
+              docker service rollback myapp_web
+              sleep 15
+              docker service ps myapp_web
+              curl -sf http://localhost:3000/health \
+                && echo "Rollback successful — previous stable version restored." \
+                || echo "Warning: rollback health check also failed."
+              exit 1
+            fi
+
+            echo "Production deployed successfully: ${{ github.sha }}"
 
       - name: Health Check on Worker Node
         uses: appleboy/ssh-action@v1
@@ -98,8 +154,6 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             echo "Verifying service status on Worker Node..."
-            # Kiểm tra xem container có đang chạy trên node này không
             docker ps | grep myapp_web || echo "Service not yet balanced to this node (normal for small clusters)"
-            # Kiểm tra khả năng truy cập dịch vụ từ node này
             curl -f http://localhost:3000/health || exit 1
             echo "Worker Node is healthy."

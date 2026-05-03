@@ -11,11 +11,18 @@ services:
       # Khởi tạo 2 bản sao (replicas) phân bổ ra cả 2 máy chủ (Manager và Worker)
       replicas: 2
       update_config:
-        # Thuật toán Rolling Update (Cuốn chiếu): 
+        # Thuật toán Rolling Update (Cuốn chiếu):
         # Cập nhật từng cái một (parallelism: 1) và đợi 10 giây (delay: 10s)
         # Quá trình này giúp hệ thống lúc nào cũng có 1 container sống chờ phản hồi (Zero Downtime)
         parallelism: 1
         delay: 10s
+      rollback_config:
+        # BONUS 7.4: Cấu hình rollback khi update thất bại
+        # Swarm sẽ rollback từng container một, đợi 5s giữa mỗi lần
+        parallelism: 1
+        delay: 5s
+        failure_action: continue
+        monitor: 10s
       restart_policy:
         # Tự động khởi động lại nếu container bị crash
         condition: on-failure
