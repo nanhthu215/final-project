@@ -49,6 +49,13 @@
   echo "Máy 2 đã gia nhập lại thành công!"
   sleep 5
 
+  # 3.5 Dọn dẹp các node cũ bị Down (tích lũy từ các lần restart trước)
+  # Nguyên nhân: mỗi lần Worker leave→rejoin, entry cũ vẫn còn trong cluster list
+  # với status=Down → global services tạo thừa task → REPLICAS hiện 5/2 thay vì 2/2
+  echo "--- Dọn dẹp node Down cũ ---"
+  docker node ls | grep "Down" | awk '{print $1}' | xargs -r docker node rm 2>/dev/null || true
+  echo "[OK] Đã xóa node Down cũ — cluster đã sạch"
+
   # 4. Triển khai lại toàn bộ hệ thống (Stack)
   # Lệnh docker stack deploy sẽ đọc file docker-stack.yml để tạo các service, replica, networking...
   docker stack deploy -c /home/ubuntu/docker-stack.yml myapp

@@ -55,6 +55,8 @@ echo db ansible_host=172.31.33.108 ansible_user=ubuntu ansible_ssh_private_key_f
 echo [all:vars]
 echo ansible_python_interpreter=/usr/bin/python3
 echo EOF
+echo.
+echo ^^ Copy toan bo tu dong "cat ^>" den dong "EOF" phia tren (gom ca dong EOF)
 
 echo.
 echo ===== DONE! =====

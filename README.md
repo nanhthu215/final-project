@@ -125,9 +125,9 @@ ansible-playbook -i ~/ansible/inventory.ini ~/ansible/playbook.yml \
 **Kết quả kỳ vọng:**
 ```
 PLAY RECAP
-app1   : ok=8  changed=0  unreachable=0  failed=0
-app2   : ok=8  changed=0  unreachable=0  failed=0
-db     : ok=6  changed=0  unreachable=0  failed=0
+app1   : ok=9  changed=0  unreachable=0  failed=0
+app2   : ok=9  changed=0  unreachable=0  failed=0
+db     : ok=9  changed=0  unreachable=0  failed=0
 ```
 
 > 💡 `changed=0` là tốt — nghĩa là cấu hình đã đúng, Ansible không cần sửa gì thêm.
