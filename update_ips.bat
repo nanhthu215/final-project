@@ -60,7 +60,7 @@ echo ^^ Copy toan bo tu dong "cat ^>" den dong "EOF" phia tren (gom ca dong EOF)
 
 echo.
 echo ===== DONE! =====
-echo.
+
 echo Checklist sau khi chay script:
 echo [x] GitHub Secrets da cap nhat
 
