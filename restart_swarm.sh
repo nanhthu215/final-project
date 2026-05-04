@@ -5,6 +5,13 @@
   docker stop node-exporter cadvisor 2>/dev/null || true
   docker rm node-exporter cadvisor 2>/dev/null || true
 
+  # 1.0 Dọn image cũ để tránh đầy disk (tích lũy sau nhiều lần deploy)
+  # Mỗi lần CI/CD push image SHA mới là một layer được lưu xuống disk
+  # docker image prune -f chỉ xóa dangling images (không có tag nào trỏ đến)
+  echo "--- Dọn image cũ không dùng ---"
+  docker image prune -f
+  echo "[OK] Đã dọn image cũ"
+
   # 1.1 Tạo file cấu hình Prometheus tự động
   mkdir -p /home/ubuntu/monitoring
   cat <<EOF > /home/ubuntu/monitoring/prometheus.yml
