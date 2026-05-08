@@ -58,7 +58,7 @@
 
   # 3.5 Dọn dẹp các node cũ bị Down (tích lũy từ các lần restart trước)
   # Nguyên nhân: mỗi lần Worker leave→rejoin, entry cũ vẫn còn trong cluster list
-  # với status=Down → global services tạo thừa task → REPLICAS hiện 5/2 thay vì 2/2
+  # với status=Down → global services tạo thừa task
   echo "--- Dọn dẹp node Down cũ ---"
   docker node ls | grep "Down" | awk '{print $1}' | xargs -r docker node rm 2>/dev/null || true
   echo "[OK] Đã xóa node Down cũ — cluster đã sạch"
@@ -73,9 +73,9 @@
   sleep 15
 
   # 6. Kiểm tra thành quả
-  echo "--- Trạng thái các máy (Phải hiện Ready) ---"
+  echo "--- Trạng thái các máy ---"
   docker node ls
-  echo "--- Trạng thái dịch vụ (Phải hiện 2/2) ---"
+  echo "--- Trạng thái dịch vụ ---"
   docker service ls
   echo "--- Kiểm tra kết nối Database ---"
   curl http://localhost:3000/health
