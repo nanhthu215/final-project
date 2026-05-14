@@ -73,7 +73,6 @@ bash /home/ubuntu/restart_swarm.sh
 | # | Hành động | Mục đích |
 |---|---|---|
 | 1 | Dọn dẹp container cũ (`node-exporter`, `cadvisor`) | Tránh conflict port khi deploy lại |
-| 1.1 | Tạo lại `/home/ubuntu/monitoring/prometheus.yml` | Đảm bảo Prometheus có config đúng sau restart |
 | 2 | Lấy Worker Join Token mới từ Manager | Token thay đổi sau mỗi lần Swarm restart |
 | 3 | SSH vào App Server 2, force leave → rejoin Swarm | Worker cần gia nhập lại cluster với token mới |
 | 4 | `docker stack deploy -c /home/ubuntu/docker-stack.yml myapp` | Deploy toàn bộ stack (web, prometheus, grafana, node-exporter, cadvisor) |

@@ -1,47 +1,47 @@
-# ─── BONUS 7.2: Multi-Environment ───────────────────────────────────────────
-  deploy-staging:
-    name: CD - Deploy to Staging
-    needs: ci
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    environment: staging  # GitHub Environment (không cần approval)
+# # ─── BONUS 7.2: Multi-Environment ───────────────────────────────────────────
+#   deploy-staging:
+#     name: CD - Deploy to Staging
+#     needs: ci
+#     runs-on: ubuntu-latest
+#     if: github.ref == 'refs/heads/main'
+#     environment: staging  # GitHub Environment (không cần approval)
 
-    steps:
-      - name: Deploy to Staging environment (port 3100)
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.APP_SERVER_1_IP }}
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            IMAGE="${{ secrets.DOCKER_USERNAME }}/midterm-app:${{ github.sha }}"
-            docker pull "$IMAGE"
+#     steps:
+#       - name: Deploy to Staging environment (port 3100)
+#         uses: appleboy/ssh-action@v1
+#         with:
+#           host: ${{ secrets.APP_SERVER_1_IP }}
+#           username: ubuntu
+#           key: ${{ secrets.SSH_PRIVATE_KEY }}
+#           script: |
+#             IMAGE="${{ secrets.DOCKER_USERNAME }}/midterm-app:${{ github.sha }}"
+#             docker pull "$IMAGE"
 
-            # Tạo mới hoặc cập nhật staging service (standalone, cổng 3100)
-            if docker service ls --format '{{.Name}}' | grep -q '^staging_web$'; then
-              docker service update \
-                --image "$IMAGE" \
-                --update-parallelism 1 \
-                --update-delay 10s \
-                staging_web
-            else
-              docker service create \
-                --name staging_web \
-                --replicas 1 \
-                --publish published=3100,target=3000 \
-                --env MONGO_URI=mongodb://172.31.33.108:27017/final_project \
-                "$IMAGE"
-            fi
+#             # Tạo mới hoặc cập nhật staging service (standalone, cổng 3100)
+#             if docker service ls --format '{{.Name}}' | grep -q '^staging_web$'; then
+#               docker service update \
+#                 --image "$IMAGE" \
+#                 --update-parallelism 1 \
+#                 --update-delay 10s \
+#                 staging_web
+#             else
+#               docker service create \
+#                 --name staging_web \
+#                 --replicas 1 \
+#                 --publish published=3100,target=3000 \
+#                 --env MONGO_URI=mongodb://172.31.33.108:27017/final_project \
+#                 "$IMAGE"
+#             fi
 
-            # Đợi Staging khởi động: thử tối đa 6 lần, mỗi 10 giây (tổng 60s)
-            echo "Waiting for Staging to be ready..."
-            for i in $(seq 1 6); do
-              sleep 10
-              if curl -sf http://localhost:3100/health > /dev/null; then
-                echo "Staging deployed OK: ${{ github.sha }}"
-                exit 0
-              fi
-              echo "Attempt $i/6 failed, retrying..."
-            done
-            echo "Staging health check FAILED after 60s"
-            exit 1
+#             # Đợi Staging khởi động: thử tối đa 6 lần, mỗi 10 giây (tổng 60s)
+#             echo "Waiting for Staging to be ready..."
+#             for i in $(seq 1 6); do
+#               sleep 10
+#               if curl -sf http://localhost:3100/health > /dev/null; then
+#                 echo "Staging deployed OK: ${{ github.sha }}"
+#                 exit 0
+#               fi
+#               echo "Attempt $i/6 failed, retrying..."
+#             done
+#             echo "Staging health check FAILED after 60s"
+#             exit 1

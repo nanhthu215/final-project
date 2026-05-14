@@ -1,31 +1,31 @@
-name: CD - Deploy to Production
+# name: CD - Deploy to Production
 
-on:
-  workflow_run:
-    workflows: ["CI/CD Pipeline"] # Chạy sau khi CI (ci.yml) thành công
-    types: [completed]
-    branches: [main]
+# on:
+#   workflow_run:
+#     workflows: ["CI/CD Pipeline"] # Chạy sau khi CI (ci.yml) thành công
+#     types: [completed]
+#     branches: [main]
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    steps:
-      - name: Deploy to App Server via SSH
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.APP_SERVER_1_IP }}
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: 22
-          script: |
-            # 1. Cập nhật Image mới nhất cho Service (Chuẩn Swarm)
-            # Dùng docker service update để Rolling Update không gây gián đoạn web
-            sudo docker service update --image nanhthu215/midterm-app:${{ github.sha }} --update-parallelism 1 --update-delay 10s myapp_web
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
+#     if: ${{ github.event.workflow_run.conclusion == 'success' }}
+#     steps:
+#       - name: Deploy to App Server via SSH
+#         uses: appleboy/ssh-action@v1
+#         with:
+#           host: ${{ secrets.APP_SERVER_1_IP }}
+#           username: ubuntu
+#           key: ${{ secrets.SSH_PRIVATE_KEY }}
+#           port: 22
+#           script: |
+#             # 1. Cập nhật Image mới nhất cho Service (Chuẩn Swarm)
+#             # Dùng docker service update để Rolling Update không gây gián đoạn web
+#             sudo docker service update --image nanhthu215/midterm-app:${{ github.sha }} --update-parallelism 1 --update-delay 10s myapp_web
             
-            # 2. Đợi 5 giây để Swarm điều phối
-            sleep 5
+#             # 2. Đợi 5 giây để Swarm điều phối
+#             sleep 5
             
-            # 3. Kiểm tra trạng thái các node ngay trong log GitHub
-            sudo docker node ls
-            sudo docker service ls
+#             # 3. Kiểm tra trạng thái các node ngay trong log GitHub
+#             sudo docker node ls
+#             sudo docker service ls
